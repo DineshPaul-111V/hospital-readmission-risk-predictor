@@ -1,0 +1,5 @@
+=== EDA & Feature Importance Summary ===
+
+1. Prior Admissions & Clinical History: Number of prior admissions in the past 12 months emerged as the single strongest predictor of 30-day readmission risk, followed closely by un-scheduled follow-up appointments.
+2. Clinical Diagnosis & Disposition: High-acuity primary diagnoses—specifically Heart Failure, Sepsis, and COPD—demonstrate significantly higher readmission base rates (~21-23%) compared to elective surgical admissions (~13%). Discharge against medical advice (AMA) dramatically escalates readmission risk.
+3. Care Coordination Impact: Absence of a scheduled follow-up appointment (Follow-up == N) and lack of an assigned case manager markedly elevate readmission probability. Enrolling high-risk patients with prior admissions in case management and locking in 48-hour post-discharge follow-ups represent the highest-yield clinical interventions to achieve the 15% reduction target.
