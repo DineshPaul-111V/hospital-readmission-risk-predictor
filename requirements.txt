@@ -5,3 +5,4 @@ streamlit>=1.28.0
 matplotlib>=3.7.0
 plotly>=5.17.0
 joblib>=1.3.0
+seaborn>=0.12.0
