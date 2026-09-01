@@ -17,8 +17,10 @@ An end-to-end clinical decision support platform designed to reduce 30-day hospi
 ```
 data analysis/
 ├── generate_readmission_data.py   # Dataset generator script (5,000 records)
-├── patient_admissions_sample.csv  # Synthetic patient admission dataset
+├── patient_admissions_sample.csv  # Original synthetic patient admission dataset (reference/fallback)
+├── patients_current.csv           # Live working dataset — updated as patients are added/removed
 ├── requirements.txt               # Python dependencies
+├── .gitignore                     # Excludes venv, pycache, and other local-only files
 ├── analysis/
 │   ├── eda_feature_importance.py  # Script for univariate analysis & feature importances
 │   ├── feature_importance.png     # Saved bar chart of top readmission drivers
@@ -29,7 +31,8 @@ data analysis/
 │   ├── readmission_model.joblib   # Serialized scikit-learn pipeline & metadata
 │   └── intervention_engine.py     # Rule-based clinical intervention mapping function
 ├── dashboard/
-│   └── app.py                     # Streamlit 3-page interactive clinical dashboard
+│   ├── app.py                     # Streamlit 4-page interactive clinical dashboard
+│   └── add_delete_patient.py      # Add/remove patient records, with risk scoring on entry
 └── README.md                      # Project documentation & run guide
 ```
 
@@ -117,6 +120,7 @@ Open your browser at `http://localhost:8501` to explore:
 - 📊 **Executive Overview:** Baseline vs 15% target progress, 12-month trajectory, feature importances.
 - 📋 **Care Team Worklist:** Filterable/sortable patient risk scores, top drivers, and interactive intervention checklist.
 - ⚙️ **Threshold Simulator:** Real-time slider to simulate recall, precision, worklist size, and net cost savings.
+- ➕ **Add / Remove Patient:** Enter a newly admitted patient's details to get an instant risk score and recommended interventions, or remove a resolved patient from the working list. Changes persist to `patients_current.csv` across sessions.
 
 ## Disclaimer
 
