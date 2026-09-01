@@ -16,7 +16,10 @@ import seaborn as sns
 
 # Ensure parent directory is in path for imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+
 from model.intervention_engine import evaluate_batch_interventions, get_patient_interventions
+from add_delete_patient import get_data_filepath, render_add_remove_patient_page
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -109,8 +112,10 @@ st.markdown("""
 
 @st.cache_data
 def load_data_and_model():
-    """Load sample patient dataset and trained model artifact."""
-    data_path = os.path.join(os.path.dirname(__file__), "..", "patient_admissions_sample.csv")
+    """
+    Load active patient dataset (persisted at patients_current.csv) and trained model artifact.
+    """
+    data_path = get_data_filepath()
     model_path = os.path.join(os.path.dirname(__file__), "..", "model", "readmission_model.joblib")
     
     if not os.path.exists(data_path):
@@ -148,7 +153,12 @@ st.sidebar.title("Navigation Center")
 
 page = st.sidebar.radio(
     "Select View Mode:",
-    ["📊 Executive Overview", "📋 Care Team Risk Worklist", "⚙️ Threshold & Model Simulator"],
+    [
+        "📊 Executive Overview", 
+        "📋 Care Team Risk Worklist", 
+        "⚙️ Threshold & Model Simulator",
+        "➕ Add / Remove Patient"
+    ],
     index=0
 )
 
@@ -187,7 +197,7 @@ if page == "📊 Executive Overview":
     """, unsafe_allow_html=True)
     
     # KPI Row
-    current_rate = filtered_df["readmitted_within_30_days"].mean()
+    current_rate = filtered_df["readmitted_within_30_days"].mean() if len(filtered_df) > 0 else 0
     target_rate = 0.187 * 0.85  # 15% reduction from baseline 18.7% -> 15.9%
     high_risk_count = (filtered_df["risk_level"] == "High Risk").sum()
     total_count = len(filtered_df)
@@ -263,7 +273,7 @@ if page == "📊 Executive Overview":
         
         feature_img_path = os.path.join(os.path.dirname(__file__), "..", "analysis", "feature_importance.png")
         if os.path.exists(feature_img_path):
-            st.image(feature_img_path, use_container_width=True)
+            st.image(feature_img_path, width="stretch")
         else:
             # Fallback inline bar chart
             fig, ax = plt.subplots(figsize=(7, 4))
@@ -280,33 +290,39 @@ if page == "📊 Executive Overview":
     f1, f2 = st.columns(2)
     with f1:
         st.markdown("**Readmission Rate by Primary Diagnosis**")
-        diag_stats = filtered_df.groupby("primary_diagnosis")["readmitted_within_30_days"].mean().reset_index()
-        diag_stats["rate_pct"] = diag_stats["readmitted_within_30_days"] * 100
-        diag_stats = diag_stats.sort_values(by="rate_pct", ascending=True)
-        
-        fig, ax = plt.subplots(figsize=(6, 3.5))
-        bars = ax.barh(diag_stats["primary_diagnosis"], diag_stats["rate_pct"], color="#0284c7")
-        ax.set_xlabel("30-Day Readmission Rate (%)")
-        ax.axvline(18.7, color="#ef4444", linestyle="--", label="Overall Baseline (18.7%)")
-        ax.legend(loc="lower right")
-        plt.tight_layout()
-        st.pyplot(fig)
+        if not filtered_df.empty:
+            diag_stats = filtered_df.groupby("primary_diagnosis")["readmitted_within_30_days"].mean().reset_index()
+            diag_stats["rate_pct"] = diag_stats["readmitted_within_30_days"] * 100
+            diag_stats = diag_stats.sort_values(by="rate_pct", ascending=True)
+            
+            fig, ax = plt.subplots(figsize=(6, 3.5))
+            bars = ax.barh(diag_stats["primary_diagnosis"], diag_stats["rate_pct"], color="#0284c7")
+            ax.set_xlabel("30-Day Readmission Rate (%)")
+            ax.axvline(18.7, color="#ef4444", linestyle="--", label="Overall Baseline (18.7%)")
+            ax.legend(loc="lower right")
+            plt.tight_layout()
+            st.pyplot(fig)
+        else:
+            st.info("No data available for selected filters.")
         
     with f2:
         st.markdown("**Readmission Rate by Follow-up Appointment Status**")
-        fu_stats = filtered_df.groupby("follow_up_scheduled")["readmitted_within_30_days"].mean().reset_index()
-        fu_stats["follow_up"] = fu_stats["follow_up_scheduled"].map({"Y": "Scheduled (Y)", "N": "Unscheduled (N)"})
-        fu_stats["rate_pct"] = fu_stats["readmitted_within_30_days"] * 100
-        
-        fig, ax = plt.subplots(figsize=(6, 3.5))
-        colors = ["#ef4444" if x == "Unscheduled (N)" else "#10b981" for x in fu_stats["follow_up"]]
-        ax.bar(fu_stats["follow_up"], fu_stats["rate_pct"], color=colors, width=0.45)
-        ax.set_ylabel("30-Day Readmission Rate (%)")
-        for i, v in enumerate(fu_stats["rate_pct"]):
-            ax.text(i, v + 0.8, f"{v:.1f}%", ha="center", fontweight="bold")
-        ax.set_ylim(0, 30)
-        plt.tight_layout()
-        st.pyplot(fig)
+        if not filtered_df.empty:
+            fu_stats = filtered_df.groupby("follow_up_scheduled")["readmitted_within_30_days"].mean().reset_index()
+            fu_stats["follow_up"] = fu_stats["follow_up_scheduled"].map({"Y": "Scheduled (Y)", "N": "Unscheduled (N)"})
+            fu_stats["rate_pct"] = fu_stats["readmitted_within_30_days"] * 100
+            
+            fig, ax = plt.subplots(figsize=(6, 3.5))
+            colors = ["#ef4444" if x == "Unscheduled (N)" else "#10b981" for x in fu_stats["follow_up"]]
+            ax.bar(fu_stats["follow_up"], fu_stats["rate_pct"], color=colors, width=0.45)
+            ax.set_ylabel("30-Day Readmission Rate (%)")
+            for i, v in enumerate(fu_stats["rate_pct"]):
+                ax.text(i, v + 0.8, f"{v:.1f}%", ha="center", fontweight="bold")
+            ax.set_ylim(0, 30)
+            plt.tight_layout()
+            st.pyplot(fig)
+        else:
+            st.info("No data available for selected filters.")
 
 
 # ==============================================================================
@@ -335,7 +351,7 @@ elif page == "📋 Care Team Risk Worklist":
             data=csv_data,
             file_name="care_team_readmission_worklist.csv",
             mime="text/csv",
-            use_container_width=True
+            width="stretch"
         )
 
     # Filter Worklist
@@ -372,7 +388,7 @@ elif page == "📋 Care Team Risk Worklist":
 
     st.dataframe(
         display_df[["Patient ID", "Age", "Diagnosis", "Insurance", "Readmission Risk", "Risk Tier", "Top Risk Drivers", "Targeted Interventions"]],
-        use_container_width=True,
+        width="stretch",
         height=450
     )
 
@@ -519,3 +535,10 @@ elif page == "⚙️ Threshold & Model Simulator":
         
         plt.tight_layout()
         st.pyplot(fig)
+
+
+# ==============================================================================
+# PAGE 4: ADD / REMOVE PATIENT MANAGEMENT
+# ==============================================================================
+elif page == "➕ Add / Remove Patient":
+    render_add_remove_patient_page(df_scored, model_payload)
